@@ -1,6 +1,7 @@
 export type SensorType = 'light' | 'humidity' | 'temperature'
 export type SortKey = 'id' | 'sensorCode' | 'typeLabel' | 'value' | 'time'
 export type SortDir = 'asc' | 'desc'
+export type FilterType = SensorType | 'all' | 'time'
 
 export interface SensorRecord {
     id: number

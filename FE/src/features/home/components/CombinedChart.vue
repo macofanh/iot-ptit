@@ -40,7 +40,7 @@ const chartData = computed(() => ({
     labels: props.data.map((d) => d.time),
     datasets: [
         {
-            label: 'Nhiệt độ',
+            label: 'Nhiệt độ(°C)',
             key: 'temp',
             data: props.data.map((d) => d.temp),
             borderColor: '#ef4444',
@@ -49,7 +49,7 @@ const chartData = computed(() => ({
             hidden: !(props.filter === 'all' || props.filter === 'temp'),
         },
         {
-            label: 'Độ ẩm',
+            label: 'Độ ẩm(%%%%sđsf)',
             key: 'humidity',
             data: props.data.map((d) => d.hum),
             borderColor: '#3b82f6',
@@ -58,7 +58,7 @@ const chartData = computed(() => ({
             hidden: !(props.filter === 'all' || props.filter === 'humidity'),
         },
         {
-            label: 'Ánh sáng',
+            label: 'Ánh sáng(lux)',
             key: 'light',
             data: props.data.map((d) => d.light),
             borderColor: '#eec200',
@@ -72,7 +72,7 @@ const chartData = computed(() => ({
 const chartOptions = computed<ChartOptions<'line'>>(() => ({
     responsive: true,
     maintainAspectRatio: false,
-    animation: false, // dữ liệu realtime nên tắt animation cho mượt
+    animation: false,
     interaction: { mode: 'index', intersect: false },
     elements: {
         line: { borderWidth: 2.5, tension: 0.2 },
@@ -87,6 +87,12 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
         x: {
             grid: { display: false },
             ticks: { font: { size: 10 }, color: '#9ca3af' },
+            title: {
+                display: true,
+                text: 'Thời gian',
+                color: '#475569',
+                font: { size: 12, weight: 'bold' },
+            },
         },
         yLeft: {
             type: 'linear',
@@ -95,14 +101,26 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
             max: 100,
             grid: { color: '#f1f5f9' },
             ticks: { stepSize: 25, font: { size: 10 }, color: '#9ca3af' },
+            title: {
+                display: true,
+                text: 'Nhiệt độ(°C), Độ ẩm(%)',
+                color: '#475569',
+                font: { size: 12, weight: 'bold' },
+            },
         },
         yRight: {
             type: 'linear',
             position: 'right',
             min: 0,
             max: 1000,
-            grid: { drawOnChartArea: false }, // tránh trùng lưới với trục trái
+            grid: { drawOnChartArea: false },
             ticks: { stepSize: 250, font: { size: 10 }, color: '#9ca3af' },
+            title: {
+                display: true,
+                text: 'Ánh sáng(lux)',
+                color: '#475569',
+                font: { size: 12, weight: 'bold' },
+            },
         },
     },
     plugins: {
@@ -114,7 +132,6 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
                 pointStyle: 'circle',
                 font: { size: 12 },
             },
-            // Click legend -> đồng bộ với select lọc ở HomeView
             onClick: (_e, item) => {
                 const keyMap = ['temp', 'humidity', 'light']
                 const key = keyMap[item.datasetIndex ?? 0]

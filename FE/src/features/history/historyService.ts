@@ -1,4 +1,10 @@
-import type { ActionLog, ActionLogResult, SortKey, SortDir } from './history'
+import type {
+    ActionLog,
+    ActionLogResult,
+    SortKey,
+    SortDir,
+    HistoryFilters,
+} from './history'
 
 const FAKE_LOGS: ActionLog[] = [
     {
@@ -43,6 +49,12 @@ const FAKE_LOGS: ActionLog[] = [
     },
 ]
 
+const DEVICE_MAP: Record<string, string> = {
+    'den-1': 'Đèn 1',
+    'den-2': 'Đèn 2',
+    quat: 'Quạt thông gió',
+}
+
 class MockHistoryService {
     connect() {}
 
@@ -52,11 +64,31 @@ class MockHistoryService {
             pageSize?: number
             sortKey?: SortKey | null
             sortDir?: SortDir
+            filters?: HistoryFilters
         } = {},
     ): Promise<ActionLogResult> {
         await new Promise((r) => setTimeout(r, 150))
 
-        const items = [...FAKE_LOGS]
+        let items = [...FAKE_LOGS]
+
+        const f = params.filters
+        if (f) {
+            if (f.device !== 'all') {
+                items = items.filter((r) => DEVICE_MAP[f.device] === r.device)
+            }
+            if (f.id.trim()) {
+                items = items.filter((r) => String(r.id).includes(f.id.trim()))
+            }
+            if (f.action !== 'all') {
+                items = items.filter((r) => r.action === f.action)
+            }
+            if (f.status !== 'all') {
+                items = items.filter((r) => r.status === f.status)
+            }
+            if (f.time.trim()) {
+                items = items.filter((r) => r.time.includes(f.time.trim()))
+            }
+        }
 
         if (params.sortKey) {
             const key = params.sortKey
@@ -68,7 +100,7 @@ class MockHistoryService {
             })
         }
 
-        return { items, total: 124 }
+        return { items, total: 1000 }
     }
 }
 

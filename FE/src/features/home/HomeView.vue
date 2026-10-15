@@ -142,9 +142,10 @@ const devices = reactive({
     led1: false,
     led2: false,
     all: false,
+    air: false,
 })
 
-const handleToggle = (deviceId: 'led1' | 'led2' | 'all', topic: string) => {
+const handleToggle = (deviceId: 'led1' | 'led2' | 'air' | 'all', topic: string) => {
     const targetState = !devices[deviceId]
     const command = targetState ? '1' : '0'
     mqttService.publishControl(topic, command)

@@ -31,7 +31,7 @@ const routes: RouteRecordRaw[] = [
                 path: 'history',
                 name: 'History',
                 component: () =>
-                    import('@/features/history/ActionLogView.vue'),
+                    import('@/features/history/HistoryView.vue'),
             },
             {
                 path: 'profile',

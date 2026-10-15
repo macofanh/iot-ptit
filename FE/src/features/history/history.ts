@@ -18,3 +18,11 @@ export interface ActionLogResult {
     items: ActionLog[]
     total: number
 }
+
+export interface HistoryFilters {
+    device: string
+    id: string
+    action: string
+    status: string
+    time: string
+}

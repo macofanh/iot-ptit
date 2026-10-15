@@ -41,6 +41,7 @@ class MockMqttService {
             'iot/control/led1': 'led1',
             'iot/control/led2': 'led2',
             'iot/control/all': 'all',
+            'iot/control/airConditioner': 'air'
         }
 
         const device = deviceMap[topic] || 'led1'

@@ -1,7 +1,7 @@
 import type {
     SensorListResult,
     SensorRecord,
-    SensorType,
+    FilterType,
     SortKey,
     SortDir,
 } from './sensors'
@@ -13,7 +13,7 @@ const FAKE_ROWS: SensorRecord[] = [
         type: 'light',
         typeLabel: 'Ánh sáng',
         value: '800 lux',
-        time: '2026/10/07 16:30:15',
+        time: '2026/10/06 16:30:15',
     },
     {
         id: 33,
@@ -29,7 +29,7 @@ const FAKE_ROWS: SensorRecord[] = [
         type: 'temperature',
         typeLabel: 'Nhiệt độ',
         value: '25.6 °C',
-        time: '2026/10/07 16:30:15',
+        time: '2026/10/05 16:30:15',
     },
     {
         id: 35,
@@ -37,7 +37,7 @@ const FAKE_ROWS: SensorRecord[] = [
         type: 'light',
         typeLabel: 'Ánh sáng',
         value: '783 lux',
-        time: '2026/10/07 16:30:13',
+        time: '2026/10/08 16:30:13',
     },
     {
         id: 36,
@@ -45,7 +45,7 @@ const FAKE_ROWS: SensorRecord[] = [
         type: 'humidity',
         typeLabel: 'Độ ẩm',
         value: '51.1 %',
-        time: '2026/10/07 16:30:13',
+        time: '2026/10/10 16:30:13',
     },
     {
         id: 37,
@@ -53,7 +53,7 @@ const FAKE_ROWS: SensorRecord[] = [
         type: 'temperature',
         typeLabel: 'Nhiệt độ',
         value: '25.6 °C',
-        time: '2026/10/07 16:30:13',
+        time: '2026/10/15 16:30:13',
     },
     {
         id: 38,
@@ -61,7 +61,7 @@ const FAKE_ROWS: SensorRecord[] = [
         type: 'light',
         typeLabel: 'Ánh sáng',
         value: '740 lux',
-        time: '2026/10/07 16:30:11',
+        time: '2026/10/22 16:30:11',
     },
     {
         id: 39,
@@ -93,7 +93,7 @@ class MockSensorService {
     connect() {}
 
     async fetchRecords(params: {
-        type?: SensorType | 'all'
+        type?: FilterType
         query?: string
         page?: number
         pageSize?: number
@@ -103,18 +103,26 @@ class MockSensorService {
         await new Promise((r) => setTimeout(r, 150))
 
         let items = [...FAKE_ROWS]
-        if (params.type && params.type !== 'all') {
+
+        // Chỉ lọc theo loại cảm biến khi chọn light/humidity/temperature
+        if (params.type && params.type !== 'all' && params.type !== 'time') {
             items = items.filter((r) => r.type === params.type)
         }
+
         if (params.query?.trim()) {
             const q = params.query.trim().toLowerCase()
-            items = items.filter(
-                (r) =>
+            items = items.filter((r) => {
+                // Chọn "Thời gian" thì chỉ tìm trong cột time
+                if (params.type === 'time') {
+                    return r.time.toLowerCase().includes(q)
+                }
+                return (
                     r.sensorCode.toLowerCase().includes(q) ||
                     r.value.toLowerCase().includes(q) ||
                     r.time.toLowerCase().includes(q) ||
-                    String(r.id).includes(q),
-            )
+                    String(r.id).includes(q)
+                )
+            })
         }
 
         if (params.sortKey) {
@@ -133,9 +141,14 @@ class MockSensorService {
 
         const page = params.page ?? 1
         const pageSize = params.pageSize ?? 10
+
+        const total = items.length
+        const start = (page - 1) * pageSize
+        const pagedItems = items.slice(start, start + pageSize)
+
         return {
-            items,
-            total: 1000,
+            items: pagedItems,
+            total,
             page,
             pageSize,
         }
