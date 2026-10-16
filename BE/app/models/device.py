@@ -8,5 +8,5 @@ class Device(Base):
 
     Id = Column(Integer, primary_key=True, autoincrement=True)
     Name = Column(String(100), nullable=False)
-    Status = Column(String(10), default="OFF")
+    Status = Column(String(10), default="off")
     UpdatedAt = Column(DateTime, server_default=func.now(), onupdate=func.now())

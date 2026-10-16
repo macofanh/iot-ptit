@@ -1,5 +1,4 @@
 from typing import Literal, Optional
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -9,9 +8,9 @@ from app.models.user import User
 from app.schemas.sensor_data import (
     ChartDataResponse,
     LatestSensorResponse,
-    SensorHistoryResponse,
+    SensorListResult,
 )
-from app.services.sensor_service import get_chart_data, get_latest_reading, get_sensor_history
+from app.services.sensor_service import get_chart_data, get_latest_reading, get_sensor_table
 
 router = APIRouter(prefix="/sensors", tags=["Sensors"])
 
@@ -21,6 +20,7 @@ def latest_reading(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """UC2.1B: Lấy dữ liệu cảm biến mới nhất."""
     record = get_latest_reading(db)
     return LatestSensorResponse(data=record)
 
@@ -32,19 +32,30 @@ def chart_data(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """UC2.2: Lấy dữ liệu cảm biến cho đồ thị."""
     data = get_chart_data(db, limit=limit, time_range=time_range)
     return ChartDataResponse(data=data)
 
 
-@router.get("/history", response_model=SensorHistoryResponse)
-def sensor_history(
+@router.get("/history", response_model=SensorListResult)
+def sensor_table(
+    type: str = Query("all"),
+    query: Optional[str] = None,
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=200),
-    search: Optional[float] = None,
-    sort_by: Literal["temperature", "humidity", "light", "created_at"] = "created_at",
-    order: Literal["asc", "desc"] = "desc",
+    pageSize: int = Query(20, ge=1, le=200),
+    sortKey: str = Query("time"),
+    sortDir: Literal["asc", "desc"] = Query("desc"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    data, total = get_sensor_history(db, page, limit, search, sort_by, order)
-    return SensorHistoryResponse(data=data, total_records=total)
+    """UC2.4: Xem dữ liệu cảm biến dạng bảng (Data Table, không pivot, JOIN Sensors)."""
+    items, total = get_sensor_table(
+        db,
+        type=type,
+        query=query,
+        page=page,
+        page_size=pageSize,
+        sort_key=sortKey,
+        sort_dir=sortDir,
+    )
+    return SensorListResult(items=items, total=total)

@@ -1,5 +1,4 @@
-from typing import Optional
-
+from typing import Any, Dict
 from sqlalchemy.orm import Session
 
 from app.repositories import action_log_repository
@@ -7,23 +6,10 @@ from app.repositories import action_log_repository
 
 def get_action_history(
     db: Session,
+    filters: Dict[str, Any],
     page: int,
-    limit: int,
-    device_id: Optional[int],
-    time_filter: Optional[str],
+    page_size: int,
 ):
-    offset = (page - 1) * limit
-    rows, total = action_log_repository.get_paginated_with_device(
-        db, offset=offset, limit=limit, device_id=device_id
-    )
-    data = [
-        {
-            "id": r.Id,
-            "device_id": r.DeviceId,
-            "device_name": r.device_name,
-            "action_type": r.ActionType,
-            "created_at": r.CreatedAt,
-        }
-        for r in rows
-    ]
-    return data, total
+    """UC2.5: Lấy lịch sử thao tác thiết bị kèm lọc đa điều kiện và phân trang."""
+    offset = (page - 1) * page_size
+    return action_log_repository.get_action_logs(db, filters, offset, page_size)

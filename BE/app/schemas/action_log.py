@@ -1,20 +1,18 @@
-from datetime import datetime
 from typing import List
-
 from pydantic import BaseModel
 
 
 class ActionLogItem(BaseModel):
     id: int
-    device_id: int
-    device_name: str
-    action_type: str
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
+    device: str        # Tên thiết bị
+    action: str        # 'on' | 'off'
+    actionLabel: str   # 'Bật' | 'Tắt'
+    status: str        # 'success' | 'failed' | 'pending'
+    statusLabel: str   # 'Thành công' | 'Thất bại' | 'Đang chờ'
+    user: str          # FullName của người thực hiện
+    time: str          # '10:32:05, 19 Aug 2026'
 
 
 class ActionLogListResponse(BaseModel):
-    data: List[ActionLogItem]
-    total_records: int
+    items: List[ActionLogItem]
+    total: int

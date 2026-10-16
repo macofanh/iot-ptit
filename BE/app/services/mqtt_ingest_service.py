@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-
 from sqlalchemy.orm import Session
 
 from app.core.sensor_cache import SENSOR_ID_MAP
@@ -11,12 +10,12 @@ logger = logging.getLogger(__name__)
 
 def handle_sensor_message(db: Session, payload: dict) -> None:
     try:
-        now = datetime.utcnow()
+        now = datetime.utcnow()  # 1 mốc thời gian dùng chung cho cả 3 dòng
 
         readings = {
-            "Temperature": float(payload["temperature"]),
-            "Humidity": float(payload["humidity"]),
-            "Light": float(payload["light"]),
+            "temperature": float(payload["temperature"]),
+            "humidity": float(payload["humidity"]),
+            "light": float(payload["light"]),
         }
 
         for sensor_name, value in readings.items():

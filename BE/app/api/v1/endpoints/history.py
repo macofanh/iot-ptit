@@ -1,5 +1,4 @@
 from typing import Optional
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -15,11 +14,22 @@ router = APIRouter(prefix="/history", tags=["History"])
 @router.get("/actions", response_model=ActionLogListResponse)
 def action_history(
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=200),
-    device_filter: Optional[int] = None,
-    time_filter: Optional[str] = None,
+    pageSize: int = Query(20, ge=1, le=200),
+    device: Optional[str] = None,
+    id: Optional[str] = None,
+    action: Optional[str] = None,
+    status: Optional[str] = None,
+    time: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    data, total = get_action_history(db, page, limit, device_filter, time_filter)
-    return ActionLogListResponse(data=data, total_records=total)
+    """UC2.5: Lấy danh sách lịch sử thao tác thiết bị (hỗ trợ lọc theo thiết bị, id, action, status, time)."""
+    filters = {
+        "device": device,
+        "id": id,
+        "action": action,
+        "status": status,
+        "time": time,
+    }
+    items, total = get_action_history(db, filters, page, pageSize)
+    return ActionLogListResponse(items=items, total=total)

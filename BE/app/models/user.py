@@ -8,5 +8,6 @@ class User(Base):
 
     Id = Column(Integer, primary_key=True, autoincrement=True)
     Username = Column(String(50), nullable=False, unique=True)
+    FullName = Column(String(100), nullable=False)
     PasswordHash = Column(String(255), nullable=False)
     CreatedAt = Column(DateTime, server_default=func.now())

@@ -1,30 +1,24 @@
 from datetime import datetime
 from typing import Optional
-
-from sqlalchemy import asc, case, desc, func
+from sqlalchemy import asc, case, cast, desc, func, or_, String
 from sqlalchemy.orm import Session
 
 from app.core.sensor_cache import SENSOR_ID_MAP
+from app.models.sensor import Sensor
 from app.models.sensor_data import SensorData
 
 
 def _pivot_subquery(db: Session):
     """
-    Gom từng nhóm 3 dòng (Temperature/Humidity/Light) cùng CreatedAt
+    Gom từng nhóm 3 dòng (temperature/humidity/light) cùng CreatedAt
     thành 1 hàng {created_at, temperature, humidity, light}.
     """
     return (
         db.query(
             SensorData.CreatedAt.label("created_at"),
-            func.max(
-                case((SensorData.SensorId == SENSOR_ID_MAP["Temperature"], SensorData.Value))
-            ).label("temperature"),
-            func.max(
-                case((SensorData.SensorId == SENSOR_ID_MAP["Humidity"], SensorData.Value))
-            ).label("humidity"),
-            func.max(
-                case((SensorData.SensorId == SENSOR_ID_MAP["Light"], SensorData.Value))
-            ).label("light"),
+            func.max(case((SensorData.SensorId == SENSOR_ID_MAP["temperature"], SensorData.Value))).label("temperature"),
+            func.max(case((SensorData.SensorId == SENSOR_ID_MAP["humidity"],    SensorData.Value))).label("humidity"),
+            func.max(case((SensorData.SensorId == SENSOR_ID_MAP["light"],       SensorData.Value))).label("light"),
         )
         .group_by(SensorData.CreatedAt)
         .subquery()
@@ -54,29 +48,52 @@ def get_since(db: Session, since: datetime, limit: int):
     )
 
 
-def get_paginated(
+def get_sensor_table_data(
     db: Session,
+    type: str,
+    query: Optional[str],
     offset: int,
     limit: int,
-    search: Optional[float],
-    sort_by: str,
-    order: str,
+    sort_key: str,
+    sort_dir: str,
 ):
-    pivot = _pivot_subquery(db)
-    query = db.query(pivot)
+    """Lấy dữ liệu cảm biến cho Data Table (UC2.4 - không pivot, JOIN Sensors)."""
+    q = db.query(SensorData, Sensor).join(Sensor, SensorData.SensorId == Sensor.Id)
 
-    if search is not None:
-        query = query.filter(pivot.c.temperature == search)
+    if type and type != "all":
+        q = q.filter(Sensor.Name == type)
 
-    SORT_COLUMN_MAP = {
-        "temperature": pivot.c.temperature,
-        "humidity": pivot.c.humidity,
-        "light": pivot.c.light,
-        "created_at": pivot.c.created_at,
+    if query:
+        q = q.filter(
+            or_(
+                Sensor.Code.ilike(f"%{query}%"),
+                cast(SensorData.Value, String).ilike(f"%{query}%"),
+                cast(SensorData.CreatedAt, String).ilike(f"%{query}%"),
+            )
+        )
+
+    total = q.count()
+
+    SORT_MAP = {
+        "value": SensorData.Value,
+        "time": SensorData.CreatedAt,
+        "type": Sensor.Name,
     }
-    column = SORT_COLUMN_MAP[sort_by]
-    query = query.order_by(desc(column) if order == "desc" else asc(column))
+    col = SORT_MAP.get(sort_key, SensorData.CreatedAt)
+    q = q.order_by(col.desc() if sort_dir == "desc" else col.asc())
 
-    total = query.count()
-    data = query.offset(offset).limit(limit).all()
-    return data, total
+    rows = q.offset(offset).limit(limit).all()
+
+    result = []
+    for data, sensor in rows:
+        result.append(
+            {
+                "id": data.Id,
+                "sensorCode": sensor.Code,
+                "type": sensor.Name,
+                "typeLabel": sensor.Label,
+                "value": f"{data.Value} {sensor.Unit}",
+                "time": data.CreatedAt.strftime("%Y/%m/%d %H:%M:%S"),
+            }
+        )
+    return result, total

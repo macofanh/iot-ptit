@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 from typing import Optional
-
 from sqlalchemy.orm import Session
 
 from app.repositories import sensor_data_repository
@@ -13,23 +12,33 @@ RANGE_MAP = {
 
 
 def get_latest_reading(db: Session):
+    """UC2.1B: Lấy bản ghi cảm biến mới nhất (pivot)."""
     return sensor_data_repository.get_latest(db)
 
 
 def get_chart_data(db: Session, limit: int, time_range: str):
+    """UC2.2: Lấy dữ liệu cảm biến vẽ biểu đồ theo khoảng thời gian."""
     since = datetime.utcnow() - RANGE_MAP[time_range]
     return sensor_data_repository.get_since(db, since=since, limit=limit)
 
 
-def get_sensor_history(
+def get_sensor_table(
     db: Session,
+    type: str,
+    query: Optional[str],
     page: int,
-    limit: int,
-    search: Optional[float],
-    sort_by: str,
-    order: str,
+    page_size: int,
+    sort_key: str,
+    sort_dir: str,
 ):
-    offset = (page - 1) * limit
-    return sensor_data_repository.get_paginated(
-        db, offset=offset, limit=limit, search=search, sort_by=sort_by, order=order
+    """UC2.4: Lấy dữ liệu cảm biến cho Data Table (không pivot, từng dòng)."""
+    offset = (page - 1) * page_size
+    return sensor_data_repository.get_sensor_table_data(
+        db,
+        type=type,
+        query=query,
+        offset=offset,
+        limit=page_size,
+        sort_key=sort_key,
+        sort_dir=sort_dir,
     )
