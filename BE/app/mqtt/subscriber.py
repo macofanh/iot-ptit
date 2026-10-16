@@ -15,21 +15,25 @@ _mqtt_subscriber: mqtt.Client | None = None
 def _on_connect(client, userdata, flags, reason_code, properties=None):
     if reason_code == 0:
         logger.info(
-            "MQTT subscriber connected! Subscribing to: %s và %s",
+            "MQTT subscriber connected! Subscribing to: %s, %s, iot/status/#",
             settings.MQTT_TOPIC_SENSOR,
             settings.MQTT_TOPIC_STATUS,
         )
         client.subscribe(settings.MQTT_TOPIC_SENSOR)
         client.subscribe(settings.MQTT_TOPIC_STATUS)
+        client.subscribe("iot/status/#")
+        client.subscribe("iot/control/ack")
     else:
         logger.error("MQTT subscriber kết nối thất bại, reason_code=%s", reason_code)
 
 
 def _on_message(client, userdata, msg):
-    if msg.topic == settings.MQTT_TOPIC_STATUS:
+    # Xử lý phản hồi trạng thái từ ESP32 (hỗ trợ cả iot/status, iot/status/ledX, iot/control/ack)
+    if msg.topic.startswith("iot/status") or msg.topic == "iot/control/ack" or msg.topic == settings.MQTT_TOPIC_STATUS:
         on_ack_message(client, userdata, msg)
         return
 
+    # Xử lý dữ liệu cảm biến
     if msg.topic == settings.MQTT_TOPIC_SENSOR:
         from app.services.mqtt_ingest_service import handle_sensor_message
 
