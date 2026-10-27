@@ -1,6 +1,7 @@
 <template>
     <div
-        class="bg-surface-container-lowest rounded-xl p-md ambient-shadow flex justify-between items-center card-press"
+        class="bg-surface-container-lowest rounded-xl p-md ambient-shadow flex justify-between items-center transition-all duration-200"
+        :class="loading ? 'opacity-90' : 'card-press'"
     >
         <div class="flex items-center gap-sm">
             <div
@@ -8,10 +9,11 @@
                 :class="status ? activeBgClass : 'bg-surface-container'"
             >
                 <span
-                    class="material-symbols-outlined"
-                    :class="
-                        status ? activeIconClass : 'text-on-surface-variant'
-                    "
+                    class="material-symbols-outlined transition-transform duration-300"
+                    :class="[
+                        status ? activeIconClass : 'text-on-surface-variant',
+                        loading ? 'animate-pulse' : '',
+                    ]"
                 >
                     {{ icon }}
                 </span>
@@ -22,9 +24,14 @@
                     >{{ name }}</span
                 >
                 <span
-                    class="font-label-md text-label-md text-on-surface-variant"
+                    class="font-label-md text-label-md transition-colors"
+                    :class="
+                        loading
+                            ? 'text-primary font-semibold'
+                            : 'text-on-surface-variant'
+                    "
                 >
-                    {{ status ? 'On' : 'Off' }}
+                    {{ loading ? 'Đang gửi lệnh...' : status ? 'Bật' : 'Tắt' }}
                 </span>
             </div>
         </div>
@@ -32,12 +39,16 @@
         <button
             type="button"
             :aria-pressed="status"
+            :disabled="loading"
             class="w-12 h-6 rounded-full relative transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            :class="status ? 'bg-primary-container' : 'bg-surface-variant'"
+            :class="[
+                status ? 'bg-primary-container' : 'bg-surface-variant',
+                loading ? 'cursor-wait opacity-80' : 'cursor-pointer',
+            ]"
             @click="$emit('toggle')"
         >
             <span
-                class="absolute top-1 left-1 w-4 h-4 rounded-full transition-transform duration-300"
+                class="absolute top-1 left-1 w-4 h-4 rounded-full transition-transform duration-300 flex items-center justify-center"
                 :class="[
                     status
                         ? 'translate-x-6 bg-on-primary shadow-md'
@@ -55,6 +66,7 @@ defineProps<{
     icon: string
     activeBgClass?: string
     activeIconClass?: string
+    loading?: boolean
 }>()
 
 defineEmits<{

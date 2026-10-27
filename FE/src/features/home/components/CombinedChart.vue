@@ -1,6 +1,28 @@
 <template>
-    <div class="w-full h-full flex flex-col min-h-[250px]">
-        <div class="flex-1 min-h-0">
+    <div class="w-full h-full flex flex-col min-h-[250px] relative">
+        <!-- Overlay OFFLINE -->
+        <Transition name="fade">
+            <div
+                v-if="!isEspConnected"
+                class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-xl bg-white/60 backdrop-blur-[2px]"
+            >
+                <span class="material-symbols-outlined text-[48px] text-error">
+                    wifi_off
+                </span>
+                <span class="font-bold text-error text-lg tracking-wide">
+                    OFFLINE
+                </span>
+                <span class="text-xs text-gray-400">
+                    Không nhận được dữ liệu từ thiết bị
+                </span>
+            </div>
+        </Transition>
+
+        <!-- Biểu đồ — mờ khi OFFLINE -->
+        <div
+            class="flex-1 min-h-0 transition-opacity duration-500"
+            :class="isEspConnected ? 'opacity-100' : 'opacity-30'"
+        >
             <Line :data="chartData" :options="chartOptions" />
         </div>
     </div>
@@ -19,15 +41,9 @@ import {
     Legend,
     type ChartOptions,
 } from 'chart.js'
+import { isEspConnected } from '@/shared/services/connectionService'  // ← thêm import này
 
-ChartJS.register(
-    LineElement,
-    PointElement,
-    LinearScale,
-    CategoryScale,
-    Tooltip,
-    Legend,
-)
+ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend)
 
 const props = defineProps<{
     data: { time: string; temp: number; hum: number; light: number }[]
@@ -49,7 +65,7 @@ const chartData = computed(() => ({
             hidden: !(props.filter === 'all' || props.filter === 'temp'),
         },
         {
-            label: 'Độ ẩm(%%%%sđsf)',
+            label: 'Độ ẩm(%)',
             key: 'humidity',
             data: props.data.map((d) => d.hum),
             borderColor: '#3b82f6',
@@ -76,12 +92,7 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
     interaction: { mode: 'index', intersect: false },
     elements: {
         line: { borderWidth: 2.5, tension: 0.2 },
-        point: {
-            radius: 3.5,
-            hoverRadius: 5,
-            borderColor: '#fff',
-            borderWidth: 1.5,
-        },
+        point: { radius: 3.5, hoverRadius: 5, borderColor: '#fff', borderWidth: 1.5 },
     },
     scales: {
         x: {
@@ -127,11 +138,7 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
         tooltip: { padding: 10 },
         legend: {
             position: 'bottom',
-            labels: {
-                usePointStyle: true,
-                pointStyle: 'circle',
-                font: { size: 12 },
-            },
+            labels: { usePointStyle: true, pointStyle: 'circle', font: { size: 12 } },
             onClick: (_e, item) => {
                 const keyMap = ['temp', 'humidity', 'light']
                 const key = keyMap[item.datasetIndex ?? 0]
@@ -142,3 +149,14 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
     },
 }))
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.4s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+</style>

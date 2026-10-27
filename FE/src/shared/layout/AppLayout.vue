@@ -78,17 +78,16 @@
                         </span>
                     </h2>
                 </div>
-                <div class="flex items-center gap-sm">
-                    <span
-                        class="font-medium text-body-md text-on-surface hidden sm:block"
-                        >Đinh Tuấn Anh</span
-                    >
+                
+                <!-- Hiển thị tên động và Nút đăng xuất -->
+                <div class="flex items-center gap-sm cursor-pointer hover:bg-gray-100 p-2 rounded-lg transition-colors" @click="handleLogout" title="Đăng xuất">
+                    <span class="font-medium text-body-md text-on-surface hidden sm:block">
+                        {{ userName }}
+                    </span>
                     <div
-                        class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold"
+                        class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold shadow-sm"
                     >
-                        <span class="material-symbols-outlined text-[20px]"
-                            >person</span
-                        >
+                        <span class="material-symbols-outlined text-[20px]">person</span>
                     </div>
                 </div>
             </header>
@@ -99,12 +98,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { isEspConnected } from '@/shared/services/connectionService'
+import { authService } from '@/features/auth/authService' // Điều chỉnh lại đường dẫn nếu file nằm chỗ khác
 
 const route = useRoute()
 const sidebarOpen = ref(false)
+const userName = ref('')
 
 const navItems = [
     { to: '/home', label: 'Trang Chủ', icon: 'home' },
@@ -119,6 +120,16 @@ const isActive = (path: string) =>
 const closeSidebarOnMobile = () => {
     if (window.innerWidth < 768) sidebarOpen.value = false
 }
+
+const handleLogout = () => {
+    if(confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+        authService.logout()
+    }
+}
+
+onMounted(() => {
+    userName.value = authService.getUserFullName()
+})
 </script>
 
 <style scoped>

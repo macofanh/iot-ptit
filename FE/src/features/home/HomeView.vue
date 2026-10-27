@@ -1,7 +1,25 @@
 <template>
     <div
-        class="p-margin-mobile md:p-lg lg:p-xl max-w-7xl mx-auto w-full flex flex-col gap-lg h-[calc(100vh-4rem)] overflow-hidden"
+        class="p-margin-mobile md:p-lg lg:p-xl max-w-7xl mx-auto w-full flex flex-col gap-lg h-[calc(100vh-4rem)] overflow-hidden relative"
     >
+        <!-- Toast thông báo nhỏ -->
+        <Transition name="toast">
+            <div
+                v-if="toastMessage"
+                class="fixed top-20 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium backdrop-blur-md transition-all duration-300"
+                :class="
+                    toastType === 'error'
+                        ? 'bg-red-50/95 text-red-700 border-red-200 shadow-red-500/10'
+                        : 'bg-emerald-50/95 text-emerald-700 border-emerald-200 shadow-emerald-500/10'
+                "
+            >
+                <span class="material-symbols-outlined text-[20px] flex-shrink-0">
+                    {{ toastType === 'error' ? 'error' : 'check_circle' }}
+                </span>
+                <span>{{ toastMessage }}</span>
+            </div>
+        </Transition>
+
         <!-- 1. Cụm Card thông số cảm biến -->
         <section class="grid grid-cols-1 sm:grid-cols-3 gap-md flex-shrink-0">
             <SensorCard
@@ -19,6 +37,7 @@
                 icon="device_thermostat"
                 iconColorClass="text-tertiary-container"
                 badgeBgClass="bg-tertiary-container"
+                :decimals="2"
             />
             <SensorCard
                 title="Độ ẩm"
@@ -84,19 +103,21 @@
                     Điều khiển thiết bị ngoại vi
                 </h3>
 
-                <!-- Danh sách nút bấm (Tự động dãn khoảng cách đều nhau) -->
+                <!-- Danh sách nút bấm -->
                 <div class="flex flex-col gap-3 mt-1">
                     <DeviceControl
-                        name="Đèn Vàng (LED 1)"
+                        name="Đèn Vàng"
                         :status="devices.led1"
+                        :loading="loadingDevices.led1"
                         icon="lightbulb"
                         activeBgClass="bg-amber-100"
                         activeIconClass="text-amber-600"
                         @toggle="handleToggle('led1', 'iot/control/led1')"
                     />
                     <DeviceControl
-                        name="Đèn Đỏ (LED 2)"
+                        name="Đèn Đỏ"
                         :status="devices.led2"
+                        :loading="loadingDevices.led2"
                         icon="lightbulb"
                         activeBgClass="bg-red-100"
                         activeIconClass="text-red-600"
@@ -105,6 +126,7 @@
                     <DeviceControl
                         name="Tất Cả Đèn"
                         :status="devices.all"
+                        :loading="loadingDevices.all"
                         icon="power_settings_new"
                         activeBgClass="bg-purple-100"
                         activeIconClass="text-purple-600"
@@ -123,7 +145,7 @@ import DeviceControl from './components/DeviceControl.vue'
 import CombinedChart from './components/CombinedChart.vue'
 import { mqttService } from './mqttService'
 import type { SensorData, StatusResponse } from './home'
-import { setEspConnected } from '@/shared/services/connectionService'
+import { isEspConnected, setEspConnected } from '@/shared/services/connectionService'
 
 const chartFilter = ref('all')
 
@@ -145,10 +167,72 @@ const devices = reactive({
     air: false,
 })
 
-const handleToggle = (deviceId: 'led1' | 'led2' | 'air' | 'all', topic: string) => {
+// Trạng thái loading cho từng thiết bị khi đang gửi lệnh
+const loadingDevices = reactive({
+    led1: false,
+    led2: false,
+    all: false,
+})
+
+// Quản lý Toast thông báo nhỏ
+const toastMessage = ref('')
+const toastType = ref<'error' | 'success'>('error')
+let toastTimeout: number | undefined
+
+const showToast = (message: string, type: 'error' | 'success' = 'error') => {
+    toastMessage.value = message
+    toastType.value = type
+    if (toastTimeout) clearTimeout(toastTimeout)
+    toastTimeout = window.setTimeout(() => {
+        toastMessage.value = ''
+    }, 3000)
+}
+
+const handleToggle = async (deviceId: 'led1' | 'led2' | 'all', topic: string) => {
+    // Yêu cầu 2: Nếu không có kết nối (OFFLINE) -> Hiển thị thông báo nhỏ, không cho bật/tắt
+    if (!isEspConnected.value) {
+        showToast('Không thể bật/tắt thiết bị khi ESP32 đang OFFLINE!', 'error')
+        return
+    }
+
+    // Tránh bấm liên tục khi lệnh trước đang xử lý
+    if (loadingDevices[deviceId]) return
+
+    // Yêu cầu 1: Bật hiệu ứng loading trong thời gian chờ phản hồi từ thiết bị
+    loadingDevices[deviceId] = true
+    if (deviceId === 'all') {
+        loadingDevices.led1 = true
+        loadingDevices.led2 = true
+    }
+
     const targetState = !devices[deviceId]
     const command = targetState ? '1' : '0'
-    mqttService.publishControl(topic, command)
+
+    try {
+        const success = await mqttService.publishControl(topic, command)
+        if (success) {
+            showToast(
+                `Đã ${targetState ? 'bật' : 'tắt'} ${
+                    deviceId === 'all'
+                        ? 'tất cả đèn'
+                        : deviceId === 'led1'
+                          ? 'Đèn Vàng'
+                          : 'Đèn Đỏ'
+                } thành công!`,
+                'success',
+            )
+        } else {
+            showToast('Thiết bị không phản hồi hoặc đã quá thời gian chờ (timeout)!', 'error')
+        }
+    } catch {
+        showToast('Lỗi gửi lệnh điều khiển đến máy chủ!', 'error')
+    } finally {
+        loadingDevices[deviceId] = false
+        if (deviceId === 'all') {
+            loadingDevices.led1 = false
+            loadingDevices.led2 = false
+        }
+    }
 }
 
 onMounted(() => {
@@ -189,6 +273,8 @@ onMounted(() => {
                     devices.led1 = isOn
                     devices.led2 = isOn
                 }
+                // Tự động đồng bộ trạng thái "Tất Cả Đèn"
+                devices.all = devices.led1 && devices.led2
             }
         },
         (connected: boolean) => {
@@ -199,5 +285,22 @@ onMounted(() => {
 
 onUnmounted(() => {
     mqttService.disconnect()
+    if (toastTimeout) clearTimeout(toastTimeout)
 })
 </script>
+
+<style scoped>
+/* Hiệu ứng Toast animation */
+.toast-enter-active,
+.toast-leave-active {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast-enter-from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.95);
+}
+.toast-leave-to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+}
+</style>

@@ -16,7 +16,7 @@
         </div>
         <div class="flex items-baseline gap-xs mt-sm">
             <span class="font-data-display text-data-display text-on-surface">{{
-                value
+                displayValue
             }}</span>
             <span class="font-body-md text-body-md text-on-surface-variant">{{
                 unit
@@ -26,14 +26,23 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
     title: string
     value: number | string
     unit: string
     icon: string
     iconColorClass: string
     badgeBgClass: string
+    decimals?: number
 }>()
+
+const displayValue = computed(() => {
+    const n = Number(props.value)
+    if (Number.isNaN(n)) return props.value
+    return n.toFixed(props.decimals ?? 0)
+})
 </script>
 
 <style scoped>
