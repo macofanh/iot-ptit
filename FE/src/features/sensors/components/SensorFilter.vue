@@ -41,8 +41,9 @@
                         ($event.target as HTMLInputElement).value,
                     )
                 "
+                @keyup.enter="$emit('apply')"
                 type="text"
-                placeholder="Nhập số (VD: 30), mã (#TEMP-01) hoặc ngày giờ (VD: 10:00)"
+                placeholder="Nhập số (VD: 30), mã (#TEMP-01) hoặc ngày giờ (VD: 27/10/2026 hoặc 09:41)"
                 class="w-full bg-[#F1F5F9] border border-[#E2E8F0] text-gray-800 placeholder-gray-400 text-[13px] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white"
             />
         </div>

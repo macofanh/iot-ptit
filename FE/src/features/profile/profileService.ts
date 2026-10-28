@@ -1,5 +1,5 @@
 import type { ProfileInfo } from './profile'
-import Me from '../../../public/images/me.jpeg'
+import Me from '@/assets/images/me.jpeg'
 
 const FAKE_PROFILE: ProfileInfo = {
     fullName: 'Đinh Tuấn Anh',

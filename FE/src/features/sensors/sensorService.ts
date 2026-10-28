@@ -6,91 +6,62 @@ import type {
     SortDir,
 } from './sensors'
 
-const FAKE_ROWS: SensorRecord[] = [
-    {
-        id: 32,
-        sensorCode: '#LIGHT-01',
-        type: 'light',
-        typeLabel: 'Ánh sáng',
-        value: '800 lux',
-        time: '2026/10/06 16:30:15',
-    },
-    {
-        id: 33,
-        sensorCode: '#HUMI-01',
-        type: 'humidity',
-        typeLabel: 'Độ ẩm',
-        value: '50.9 %',
-        time: '2026/10/07 16:30:15',
-    },
-    {
-        id: 34,
-        sensorCode: '#TEMP-01',
-        type: 'temperature',
-        typeLabel: 'Nhiệt độ',
-        value: '25.6 °C',
-        time: '2026/10/05 16:30:15',
-    },
-    {
-        id: 35,
-        sensorCode: '#LIGHT-01',
-        type: 'light',
-        typeLabel: 'Ánh sáng',
-        value: '783 lux',
-        time: '2026/10/08 16:30:13',
-    },
-    {
-        id: 36,
-        sensorCode: '#HUMI-01',
-        type: 'humidity',
-        typeLabel: 'Độ ẩm',
-        value: '51.1 %',
-        time: '2026/10/10 16:30:13',
-    },
-    {
-        id: 37,
-        sensorCode: '#TEMP-01',
-        type: 'temperature',
-        typeLabel: 'Nhiệt độ',
-        value: '25.6 °C',
-        time: '2026/10/15 16:30:13',
-    },
-    {
-        id: 38,
-        sensorCode: '#LIGHT-01',
-        type: 'light',
-        typeLabel: 'Ánh sáng',
-        value: '740 lux',
-        time: '2026/10/22 16:30:11',
-    },
-    {
-        id: 39,
-        sensorCode: '#HUMI-01',
-        type: 'humidity',
-        typeLabel: 'Độ ẩm',
-        value: '51.2 %',
-        time: '2026/10/07 16:30:11',
-    },
-    {
-        id: 40,
-        sensorCode: '#TEMP-01',
-        type: 'temperature',
-        typeLabel: 'Nhiệt độ',
-        value: '25.6 °C',
-        time: '2026/10/07 16:30:11',
-    },
-    {
-        id: 41,
-        sensorCode: '#LIGHT-01',
-        type: 'light',
-        typeLabel: 'Ánh sáng',
-        value: '741 lux',
-        time: '2026/10/07 16:30:09',
-    },
-]
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
-class MockSensorService {
-    connect() {}
+/**
+ * Định dạng thời gian sang chuẩn Việt Nam: DD/MM/YYYY HH:mm:ss
+ * Đồng thời hiểu đúng mốc thời gian UTC từ Backend để khớp với giờ hiện tại (UTC+7)
+ */
+export function formatDateTime(timeStr: string): string {
+    if (!timeStr) return ''
+    const str = String(timeStr).trim()
+
+    // 1. Nếu chuỗi ở dạng MM/DD/YYYY hoặc DD/MM/YYYY
+    const slashParts = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(.*)$/)
+    if (slashParts && slashParts[1] && slashParts[2] && slashParts[3]) {
+        const p1 = slashParts[1]
+        const p2 = slashParts[2]
+        const year = slashParts[3]
+        const rest = (slashParts[4] || '').replace(/^,\s*/, ' ')
+        const n1 = parseInt(p1, 10)
+        const n2 = parseInt(p2, 10)
+        // Nếu số thứ 2 > 12 -> chắc chắn dạng MM/DD/YYYY (US) -> chuyển sang DD/MM/YYYY
+        if (n2 > 12) {
+            return `${String(n2).padStart(2, '0')}/${String(n1).padStart(2, '0')}/${year}${rest}`
+        }
+        // Nếu số thứ 1 > 12 -> chắc chắn đã là DD/MM/YYYY
+        if (n1 > 12) {
+            return `${String(n1).padStart(2, '0')}/${String(n2).padStart(2, '0')}/${year}${rest}`
+        }
+    }
+
+    // 2. Chuyển chuỗi thành chuẩn UTC ISO 8601 nếu chưa có ký hiệu timezone (thêm 'Z')
+    let s = str
+    if (!s.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(s)) {
+        s = s.replace(' ', 'T').replace(/\//g, '-')
+        s = `${s}Z`
+    }
+
+    const date = new Date(s)
+    if (isNaN(date.getTime())) {
+        return str
+    }
+
+    // Format sang giờ địa phương của người dùng (UTC+7)
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
+}
+
+class SensorService {
+    connect() {
+        // Lifecycle hook nếu cần kết nối WebSocket/MQTT sau này
+    }
 
     async fetchRecords(params: {
         type?: FilterType
@@ -100,59 +71,80 @@ class MockSensorService {
         sortKey?: SortKey | null
         sortDir?: SortDir
     }): Promise<SensorListResult> {
-        await new Promise((r) => setTimeout(r, 150))
-
-        let items = [...FAKE_ROWS]
-
-        // Chỉ lọc theo loại cảm biến khi chọn light/humidity/temperature
-        if (params.type && params.type !== 'all' && params.type !== 'time') {
-            items = items.filter((r) => r.type === params.type)
-        }
-
-        if (params.query?.trim()) {
-            const q = params.query.trim().toLowerCase()
-            items = items.filter((r) => {
-                // Chọn "Thời gian" thì chỉ tìm trong cột time
-                if (params.type === 'time') {
-                    return r.time.toLowerCase().includes(q)
-                }
-                return (
-                    r.sensorCode.toLowerCase().includes(q) ||
-                    r.value.toLowerCase().includes(q) ||
-                    r.time.toLowerCase().includes(q) ||
-                    String(r.id).includes(q)
-                )
-            })
-        }
-
-        if (params.sortKey) {
-            const key = params.sortKey
-            const dir = params.sortDir === 'desc' ? -1 : 1
-            items.sort((a, b) => {
-                if (key === 'id') return (a.id - b.id) * dir
-                if (key === 'value') {
-                    // "800 lux", "50.9 %", "25.6 °C" -> lấy phần số
-                    return (parseFloat(a.value) - parseFloat(b.value)) * dir
-                }
-                // time dạng yyyy/MM/dd HH:mm:ss nên so sánh chuỗi là đúng
-                return String(a[key]).localeCompare(String(b[key]), 'vi') * dir
-            })
-        }
-
         const page = params.page ?? 1
         const pageSize = params.pageSize ?? 10
+        const sortKey = params.sortKey || 'time'
+        const sortDir = params.sortDir || 'desc'
+        const type = params.type || 'all'
 
-        const total = items.length
-        const start = (page - 1) * pageSize
-        const pagedItems = items.slice(start, start + pageSize)
+        const queryParams = new URLSearchParams({
+            page: String(page),
+            pageSize: String(pageSize),
+            sortKey: sortKey,
+            sortDir: sortDir,
+            type: type,
+        })
 
-        return {
-            items: pagedItems,
-            total,
-            page,
-            pageSize,
+        if (params.query?.trim()) {
+            queryParams.append('query', params.query.trim())
+        }
+
+        try {
+            const token = localStorage.getItem('access_token') || ''
+            const response = await fetch(
+                `${API_BASE_URL}/api/sensors/history?${queryParams.toString()}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                },
+            )
+
+            if (!response.ok) {
+                console.error(
+                    'Lỗi khi tải dữ liệu cảm biến:',
+                    response.status,
+                    response.statusText,
+                )
+                return {
+                    items: [],
+                    total: 0,
+                    page,
+                    pageSize,
+                }
+            }
+
+            const data = await response.json()
+            const rawItems: any[] = data.items || []
+
+            // Chuẩn hóa và format lại thời gian theo DD/MM/YYYY HH:mm:ss
+            const items: SensorRecord[] = rawItems.map((item) => ({
+                id: item.id,
+                sensorCode: item.sensorCode,
+                type: item.type,
+                typeLabel: item.typeLabel,
+                value: item.value,
+                time: formatDateTime(item.time),
+            }))
+
+            return {
+                items,
+                total: data.total ?? 0,
+                page,
+                pageSize,
+            }
+        } catch (error) {
+            console.error('Lỗi kết nối tới Backend API:', error)
+            return {
+                items: [],
+                total: 0,
+                page,
+                pageSize,
+            }
         }
     }
 }
 
-export const sensorService = new MockSensorService()
+export const sensorService = new SensorService()

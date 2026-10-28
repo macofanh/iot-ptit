@@ -60,24 +60,46 @@ def get_sensor_table_data(
     """Lấy dữ liệu cảm biến cho Data Table (UC2.4 - không pivot, JOIN Sensors)."""
     q = db.query(SensorData, Sensor).join(Sensor, SensorData.SensorId == Sensor.Id)
 
-    if type and type != "all":
+    if type and type not in ("all", "time"):
         q = q.filter(Sensor.Name == type)
 
     if query:
-        q = q.filter(
-            or_(
-                Sensor.Code.ilike(f"%{query}%"),
-                cast(SensorData.Value, String).ilike(f"%{query}%"),
-                cast(SensorData.CreatedAt, String).ilike(f"%{query}%"),
+        import re
+        q_str = query.strip()
+        date_patterns = [
+            cast(SensorData.CreatedAt, String).ilike(f"%{q_str}%"),
+        ]
+        match_full = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", q_str)
+        if match_full:
+            d, m, y = match_full.groups()
+            date_patterns.append(cast(SensorData.CreatedAt, String).ilike(f"{y}-{int(m):02d}-{int(d):02d}%"))
+        else:
+            match_dm = re.match(r"^(\d{1,2})/(\d{1,2})$", q_str)
+            if match_dm:
+                d, m = match_dm.groups()
+                date_patterns.append(cast(SensorData.CreatedAt, String).ilike(f"%-{int(m):02d}-{int(d):02d}%"))
+
+        if type == "time":
+            q = q.filter(or_(*date_patterns))
+        else:
+            q = q.filter(
+                or_(
+                    Sensor.Code.ilike(f"%{q_str}%"),
+                    Sensor.Label.ilike(f"%{q_str}%"),
+                    cast(SensorData.Value, String).ilike(f"%{q_str}%"),
+                    *date_patterns,
+                )
             )
-        )
 
     total = q.count()
 
     SORT_MAP = {
+        "id": SensorData.Id,
+        "sensorCode": Sensor.Code,
+        "type": Sensor.Name,
+        "typeLabel": Sensor.Label,
         "value": SensorData.Value,
         "time": SensorData.CreatedAt,
-        "type": Sensor.Name,
     }
     col = SORT_MAP.get(sort_key, SensorData.CreatedAt)
     q = q.order_by(col.desc() if sort_dir == "desc" else col.asc())
@@ -93,7 +115,7 @@ def get_sensor_table_data(
                 "type": sensor.Name,
                 "typeLabel": sensor.Label,
                 "value": f"{data.Value} {sensor.Unit}",
-                "time": data.CreatedAt.strftime("%Y/%m/%d %H:%M:%S"),
+                "time": data.CreatedAt.strftime("%Y-%m-%dT%H:%M:%SZ"),
             }
         )
     return result, total

@@ -13,7 +13,9 @@
                         : 'bg-emerald-50/95 text-emerald-700 border-emerald-200 shadow-emerald-500/10'
                 "
             >
-                <span class="material-symbols-outlined text-[20px] flex-shrink-0">
+                <span
+                    class="material-symbols-outlined text-[20px] flex-shrink-0"
+                >
                     {{ toastType === 'error' ? 'error' : 'check_circle' }}
                 </span>
                 <span>{{ toastMessage }}</span>
@@ -145,7 +147,11 @@ import DeviceControl from './components/DeviceControl.vue'
 import CombinedChart from './components/CombinedChart.vue'
 import { mqttService } from './mqttService'
 import type { SensorData, StatusResponse } from './home'
-import { isEspConnected, setEspConnected } from '@/shared/services/connectionService'
+import {
+    isEspConnected,
+    setEspConnected,
+} from '@/shared/services/connectionService'
+import { devices, applyDeviceStatus } from './deviceState'
 
 const chartFilter = ref('all')
 
@@ -160,12 +166,12 @@ const chartHistory = ref<
     { time: string; temp: number; hum: number; light: number }[]
 >([])
 
-const devices = reactive({
-    led1: false,
-    led2: false,
-    all: false,
-    air: false,
-})
+// const devices = reactive({
+//     led1: false,
+//     led2: false,
+//     all: false,
+//     air: false,
+// })
 
 // Trạng thái loading cho từng thiết bị khi đang gửi lệnh
 const loadingDevices = reactive({
@@ -188,7 +194,10 @@ const showToast = (message: string, type: 'error' | 'success' = 'error') => {
     }, 3000)
 }
 
-const handleToggle = async (deviceId: 'led1' | 'led2' | 'all', topic: string) => {
+const handleToggle = async (
+    deviceId: 'led1' | 'led2' | 'all',
+    topic: string,
+) => {
     // Yêu cầu 2: Nếu không có kết nối (OFFLINE) -> Hiển thị thông báo nhỏ, không cho bật/tắt
     if (!isEspConnected.value) {
         showToast('Không thể bật/tắt thiết bị khi ESP32 đang OFFLINE!', 'error')
@@ -222,7 +231,10 @@ const handleToggle = async (deviceId: 'led1' | 'led2' | 'all', topic: string) =>
                 'success',
             )
         } else {
-            showToast('Thiết bị không phản hồi hoặc đã quá thời gian chờ (timeout)!', 'error')
+            showToast(
+                'Thiết bị không phản hồi hoặc đã quá thời gian chờ (timeout)!',
+                'error',
+            )
         }
     } catch {
         showToast('Lỗi gửi lệnh điều khiển đến máy chủ!', 'error')
@@ -265,16 +277,7 @@ onMounted(() => {
         },
         (statusResp: StatusResponse) => {
             if (statusResp.action === 'success') {
-                const isOn = statusResp.status === '1'
-                if (statusResp.device === 'led1') devices.led1 = isOn
-                else if (statusResp.device === 'led2') devices.led2 = isOn
-                else if (statusResp.device === 'all') {
-                    devices.all = isOn
-                    devices.led1 = isOn
-                    devices.led2 = isOn
-                }
-                // Tự động đồng bộ trạng thái "Tất Cả Đèn"
-                devices.all = devices.led1 && devices.led2
+                applyDeviceStatus(statusResp.device, statusResp.status === '1')
             }
         },
         (connected: boolean) => {

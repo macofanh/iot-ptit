@@ -20,6 +20,7 @@
                 :rows="rows"
                 :sortKey="sortKey"
                 :sortDir="sortDir"
+                :loading="loading"
                 @sort="toggleSort"
             />
 
@@ -50,12 +51,13 @@ import SensorPagination from './components/SensorPagination.vue'
 const filterType = ref<FilterType>('all')
 const query = ref('')
 const currentPage = ref(1)
-const pageSize = ref(5)
+const pageSize = ref(10)
 const rows = ref<SensorRecord[]>([])
 const total = ref(0)
+const loading = ref(false)
 
-const sortKey = ref<SortKey | null>(null)
-const sortDir = ref<SortDir>('asc')
+const sortKey = ref<SortKey | null>('time')
+const sortDir = ref<SortDir>('desc')
 
 const columns: { key: SortKey; label: string; width: string }[] = [
     { key: 'id', label: 'ID', width: 'w-[12%]' },
@@ -112,28 +114,27 @@ const clearFilters = () => {
     filterType.value = 'all'
     query.value = ''
     currentPage.value = 1
+    sortKey.value = 'time'
+    sortDir.value = 'desc'
     loadData()
 }
 
 const loadData = async () => {
-    const result = await sensorService.fetchRecords({
-        type: filterType.value,
-        query: query.value,
-        page: currentPage.value,
-        pageSize: pageSize.value,
-        sortKey: sortKey.value,
-        sortDir: sortDir.value,
-    })
-    console.log(
-        'pageSize gửi đi:',
-        pageSize.value,
-        '| items nhận về:',
-        result.items.length,
-        '| total:',
-        result.total,
-    )
-    rows.value = result.items
-    total.value = result.total
+    loading.value = true
+    try {
+        const result = await sensorService.fetchRecords({
+            type: filterType.value,
+            query: query.value,
+            page: currentPage.value,
+            pageSize: pageSize.value,
+            sortKey: sortKey.value,
+            sortDir: sortDir.value,
+        })
+        rows.value = result.items
+        total.value = result.total
+    } finally {
+        loading.value = false
+    }
 }
 
 onMounted(() => {
@@ -144,12 +145,12 @@ onMounted(() => {
 const toggleSort = (key: SortKey) => {
     if (sortKey.value !== key) {
         sortKey.value = key
-        sortDir.value = 'asc'
-    } else if (sortDir.value === 'asc') {
         sortDir.value = 'desc'
-    } else {
-        sortKey.value = null
+    } else if (sortDir.value === 'desc') {
         sortDir.value = 'asc'
+    } else {
+        sortKey.value = 'time'
+        sortDir.value = 'desc'
     }
     currentPage.value = 1
     loadData()
