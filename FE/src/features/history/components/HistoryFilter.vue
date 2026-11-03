@@ -44,8 +44,9 @@
                             ($event.target as HTMLInputElement).value,
                         )
                     "
+                    @keyup.enter="$emit('apply')"
                     type="text"
-                    placeholder="VD: 01, OP-102..."
+                    placeholder="VD: 01, 102..."
                     class="w-full bg-[#F1F5F9] border border-[#E2E8F0] text-gray-800 placeholder-gray-400 text-[13px] rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white"
                 />
             </div>
@@ -118,8 +119,9 @@
                             ($event.target as HTMLInputElement).value,
                         )
                     "
+                    @keyup.enter="$emit('apply')"
                     type="text"
-                    placeholder="VD: 24/10/2024..."
+                    placeholder="VD: 27/10/2026..."
                     class="w-full bg-[#F1F5F9] border border-[#E2E8F0] text-gray-800 placeholder-gray-400 text-[13px] rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white"
                 />
             </div>

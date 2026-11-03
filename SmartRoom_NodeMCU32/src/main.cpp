@@ -6,11 +6,11 @@
 // ==========================================
 // 1. CẤU HÌNH MẠNG & BẢO MẬT MQTT
 // ==========================================
-const char* ssid = "Tuan";
-const char* password = "123456789";
-const char* mqtt_server = "192.168.137.37";
+const char* ssid = "DiTa";
+const char* password = "11111111";
+const char* mqtt_server = "172.20.10.2";
 
-const int mqtt_port = 2311; 
+const int mqtt_port = 2311;
 
 // Tài khoản và Mật khẩu MQTT
 const char* mqtt_user = "DTA";
@@ -194,20 +194,39 @@ void loop() {
 
     float h = dht.readHumidity();
     float t = dht.readTemperature();
-    int rawLight = analogRead(LIGHT_PIN); 
-    int lightVal = 4095 - rawLight;
 
     if (isnan(h) || isnan(t)) {
       Serial.println("Loi doc cam bien DHT11!");
       return;
     }
 
+    int rawLight = 4095 - analogRead(LIGHT_PIN);
+    
+    // Tránh lỗi chia cho 0 khi rawLight bằng 0 hoặc quá cấu hình
+    if (rawLight < 10) rawLight = 10;
+    if (rawLight > 4080) rawLight = 4080;
+
+    // Chuyển đổi giá trị ADC (12-bit trên ESP32) sang Điện áp (Volt)
+    // ESP32 mặc định đo max ~3.3V ở giá trị 4095
+    float voltage = rawLight * (3.3 / 4095.0);
+
+    // Tính điện trở của LDR (Giả định bạn đang dùng trở kéo 10kOhm nối GND)
+    // Nếu bạn dùng module LDR có sẵn ngoài thị trường, cấu hình này cho độ chính xác tương đối khá ổn
+    float ldrResistance = (3.3 - voltage) * 10000 / voltage;
+
+    // Công thức thực nghiệm chuyển đổi từ điện trở LDR sang Lux
+    // Thường hằng số quang trở tiêu chuẩn là: Lux = 500 / R_ldr (kOhm)
+    float luxVal = 500.0 / (ldrResistance / 1000.0); 
+
+    // Giới hạn giá trị Lux tối thiểu để tránh hiển thị số âm hoặc vô cùng
+    if (luxVal < 0) luxVal = 0; 
+
     String payload = "{\"temperature\":";
-    payload += t;
+    payload += String(t, 2);      // Giữ 2 số thập phân
     payload += ",\"humidity\":";
-    payload += h;
+    payload += String(h, 2);      // Giữ 2 số thập phân
     payload += ",\"light\":";
-    payload += lightVal;
+    payload += String(luxVal, 0);    // Lux thường là số nguyên nên để 0
     payload += "}";
 
     Serial.print("Publish message: ");

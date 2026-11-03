@@ -34,7 +34,21 @@
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 text-gray-800">
+                <tr v-if="loading">
+                    <td :colspan="columns.length" class="py-12 text-center text-gray-500">
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="animate-spin material-symbols-outlined text-[22px] text-primary">progress_activity</span>
+                            <span class="text-sm font-medium">Đang tải lịch sử thao tác...</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr v-else-if="logs.length === 0">
+                    <td :colspan="columns.length" class="py-12 text-center text-gray-400 text-sm">
+                        Không tìm thấy lịch sử thao tác nào phù hợp
+                    </td>
+                </tr>
                 <tr
+                    v-else
                     v-for="row in logs"
                     :key="row.id"
                     class="hover:bg-gray-50/70 transition-colors"
@@ -94,6 +108,7 @@ const props = defineProps<{
     logs: ActionLog[]
     sortKey: SortKey | null
     sortDir: SortDir
+    loading?: boolean
 }>()
 
 defineEmits<{

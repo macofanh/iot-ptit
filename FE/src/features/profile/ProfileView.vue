@@ -1,7 +1,7 @@
 <template>
     <div class="p-margin-mobile md:p-lg lg:p-xl max-w-4xl mx-auto w-full">
         <div
-            class="bg-surface-container-lowest rounded-xl ambient-shadow p-lg max-w-2xl mx-auto"
+            class="bg-surface-container-lowest rounded-xl ambient-shadow p-lg max-w-4xl mx-auto"
         >
             <div class="flex flex-col items-center mb-xl">
                 <div class="relative shrink-0 mb-lg">
@@ -84,9 +84,25 @@
                         :href="profile.apiDocs"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="text-primary hover:underline"
+                        class="text-primary hover:underline min-w-0 sm:max-w-[75%] break-all sm:text-right"
                     >
                         {{ profile.apiDocs }}
+                    </a>
+                </div>
+
+                <div
+                    class="flex flex-col sm:flex-row sm:justify-between border-b border-outline-variant/30 pb-sm"
+                >
+                    <span class="font-semibold text-on-surface-variant">
+                        GG Docs:
+                    </span>
+                    <a
+                        :href="profile.docs"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-primary hover:underline min-w-0 sm:max-w-[75%] break-all sm:text-right"
+                    >
+                        {{ profile.docs }}
                     </a>
                 </div>
             </div>
@@ -106,6 +122,7 @@ const profile = reactive<ProfileInfo>({
     github: '',
     figma: '',
     apiDocs: '',
+    docs: '',
     avatarUrl: '',
 })
 

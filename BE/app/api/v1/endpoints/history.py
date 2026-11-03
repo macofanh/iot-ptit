@@ -20,10 +20,12 @@ def action_history(
     action: Optional[str] = None,
     status: Optional[str] = None,
     time: Optional[str] = None,
+    sortKey: str = Query("time"),
+    sortDir: str = Query("desc"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """UC2.5: Lấy danh sách lịch sử thao tác thiết bị (hỗ trợ lọc theo thiết bị, id, action, status, time)."""
+    """UC2.5: Lấy danh sách lịch sử thao tác thiết bị (hỗ trợ lọc theo thiết bị, id, action, status, time, sort)."""
     filters = {
         "device": device,
         "id": id,
@@ -31,5 +33,7 @@ def action_history(
         "status": status,
         "time": time,
     }
-    items, total = get_action_history(db, filters, page, pageSize)
+    items, total = get_action_history(
+        db, filters, page, pageSize, sort_key=sortKey, sort_dir=sortDir
+    )
     return ActionLogListResponse(items=items, total=total)

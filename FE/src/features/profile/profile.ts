@@ -5,5 +5,6 @@ export interface ProfileInfo {
     github: string
     figma: string
     apiDocs: string
+    docs: string
     avatarUrl: string
 }

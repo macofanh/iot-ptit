@@ -22,6 +22,7 @@
                 :logs="logs"
                 :sortKey="sortKey"
                 :sortDir="sortDir"
+                :loading="loading"
                 @sort="toggleSort"
             />
 
@@ -61,8 +62,10 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const logs = ref<ActionLog[]>([])
 const total = ref(0)
-const sortKey = ref<SortKey | null>(null)
-const sortDir = ref<SortDir>('asc')
+const loading = ref(false)
+
+const sortKey = ref<SortKey | null>('time')
+const sortDir = ref<SortDir>('desc')
 
 // Logic Phân trang
 const totalPages = computed(() =>
@@ -114,19 +117,26 @@ const clearFilters = () => {
     filters.status = 'all'
     filters.time = ''
     currentPage.value = 1
+    sortKey.value = 'time'
+    sortDir.value = 'desc'
     loadData()
 }
 
 const loadData = async () => {
-    const result = await historyService.fetchLogs({
-        page: currentPage.value,
-        pageSize: pageSize.value,
-        sortKey: sortKey.value,
-        sortDir: sortDir.value,
-        filters: { ...filters },
-    })
-    logs.value = result.items
-    total.value = result.total
+    loading.value = true
+    try {
+        const result = await historyService.fetchLogs({
+            page: currentPage.value,
+            pageSize: pageSize.value,
+            sortKey: sortKey.value,
+            sortDir: sortDir.value,
+            filters: { ...filters },
+        })
+        logs.value = result.items
+        total.value = result.total
+    } finally {
+        loading.value = false
+    }
 }
 
 onMounted(() => {
@@ -137,12 +147,12 @@ onMounted(() => {
 const toggleSort = (key: SortKey) => {
     if (sortKey.value !== key) {
         sortKey.value = key
-        sortDir.value = 'asc'
-    } else if (sortDir.value === 'asc') {
         sortDir.value = 'desc'
-    } else {
-        sortKey.value = null
+    } else if (sortDir.value === 'desc') {
         sortDir.value = 'asc'
+    } else {
+        sortKey.value = 'time'
+        sortDir.value = 'desc'
     }
     currentPage.value = 1
     loadData()

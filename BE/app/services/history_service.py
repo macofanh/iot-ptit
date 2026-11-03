@@ -9,7 +9,11 @@ def get_action_history(
     filters: Dict[str, Any],
     page: int,
     page_size: int,
+    sort_key: str = "time",
+    sort_dir: str = "desc",
 ):
     """UC2.5: Lấy lịch sử thao tác thiết bị kèm lọc đa điều kiện và phân trang."""
     offset = (page - 1) * page_size
-    return action_log_repository.get_action_logs(db, filters, offset, page_size)
+    return action_log_repository.get_action_logs(
+        db, filters, offset, page_size, sort_key=sort_key, sort_dir=sort_dir
+    )
